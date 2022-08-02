@@ -8,7 +8,6 @@
  *compare function for given val from temp sense and threshold --> returns bool val
 */
 
-
 #include <stdlib.h>
 #include <string.h>
 #include <LCD_screen.h>
