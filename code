@@ -1,0 +1,48 @@
+/*create global threshold for maximum temperature
+ *create global bool val for passed threshold
+ *create volatile var for temperature
+ *create integer for buzzerPin
+ *create function for LSD device
+ *create function that takes in input bool and returns void -- purpose is to cause output buzz on buzzer
+ *configure ADC_init and set output pin to buzzer (take code from buzzer project
+ *compare function for given val from temp sense and threshold --> returns bool val
+*/
+
+#include <stdlib.h>
+#include <string.h>
+#include <LCD_screen.h>
+#include <LCD_screen_font.h>
+#include <LCD_utilities.h>
+#include <Screen_HX8353E.h>
+#include <Terminal12e.h>
+#include <Terminal6e.h>
+#include <Terminal8e.h>
+Screen_HX8353E myScreen;
+
+int threshold;
+bool passed_threshold;
+volatile uint8_t temp;
+
+void LCD_init() {
+
+  myScreen.begin();
+
+  
+  myScreen.gText(8, 5, "Temperature Data");
+}
+
+void ADC_init() {
+  
+}
+
+void setup() {
+  
+  GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN1);
+  // put your setup code here, to run once:
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly: 
+  
+}
