@@ -15,24 +15,26 @@
 #include <Terminal8e.h>
 #include <gpio.h>
 
-
-Screen_HX8353E myScreen;
-
-int threshold;
-bool passed_threshold;
+//made up threshold val *can change later*
+int threshold = 110;
 volatile uint8_t temp;
 int input = 0;
 int count = 0;
 
-void RGB_output(uint8_t count) {
-  
-    /*
-     * Add RGB counter from Lab 5 here
-     * This will increment every second
-     * This is a visual representation that your stopwatch is working
-     */
+//thermal function that activates input above certain threshold 
+int thermal(int temp){
+  int ret;
+  if(temp > threshold){
+    ret = 1;
+  } else{
+    ret = 0;
+  }
 
-     if(count == 0){
+  return ret;
+}
+
+void RGB_output(uint8_t count) {
+  if(count == 0){
     GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
   } else if(count == 1){
     GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1 | GPIO_PIN2);
@@ -52,9 +54,10 @@ void setup() {
 }
 
 void loop() {
-
+  //to work requires button to be pressed in to work
   if(GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN1) == 0){
-    input = 1;
+    //change 120 to actual input value from thermal sensor
+    input = thermal(120);
     RGB_output(input);
   } else{
     input = 0;
