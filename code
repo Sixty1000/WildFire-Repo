@@ -16,15 +16,18 @@
 #include <gpio.h>
 
 //made up threshold val *can change later*
-int threshold = 110;
+int upper_threshold = 130;
+int lower_threshold = 100;
 volatile uint8_t temp;
 int input = 0;
 int count = 0;
 
 //thermal function that activates input above certain threshold 
-int thermal(int temp){
+int thermal(int temperature){
   int ret;
-  if(temp > threshold){
+  if(temperature > upper_threshold){
+    ret = 2;
+  } else if(temperature > lower_threshold){
     ret = 1;
   } else{
     ret = 0;
@@ -33,14 +36,22 @@ int thermal(int temp){
   return ret;
 }
 
-void RGB_output(uint8_t count) {
-  if(count == 0){
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
-  } else if(count == 1){
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1 | GPIO_PIN2);
+
+
+void RGB_output(uint8_t count){
+  if(count == 0) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 |GPIO_PIN2);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
+  } else if(count == 1) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
+  } else if(count == 2) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1 |GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
     GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0);
   }
-
 }
 
 void setup() {
@@ -48,21 +59,19 @@ void setup() {
   GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN1);
   GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
   GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
-  
-  // put your setup code here, to run once:
 
 }
 
 void loop() {
-  //to work requires button to be pressed in to work
+  //to work requires button to be pressed in to work 
+  //**change this so either systick or some other input value whenever the drone is in scanning phase**
   if(GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN1) == 0){
     //change 120 to actual input value from thermal sensor
-    input = thermal(120);
+    input = thermal(100);
     RGB_output(input);
   } else{
     input = 0;
     RGB_output(input);
   }
-  // put your main code here, to run repeatedly: 
   
 }
