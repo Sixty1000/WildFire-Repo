@@ -5,6 +5,10 @@
  *create function that takes in input bool and returns void -- purpose is to cause output buzz on buzzer
  *configure ADC_init and set output pin to light (take code from RGB project
  *compare function for given val from temp sense and threshold --> returns bool val
+ *Green && Red --> non-scanning phase
+ *Green --> safe area
+ *Yellow --> potentially dangerous
+ *Red --> dangerous
 */
 
 #include <stdlib.h>
@@ -41,16 +45,20 @@ int thermal(int temperature){
 void RGB_output(uint8_t count){
   if(count == 0) {
     GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 |GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
     GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
-    GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
   } else if(count == 1) {
     GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
     GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1);
-    GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
   } else if(count == 2) {
     GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1 |GPIO_PIN2);
     GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
     GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0);
+  } else {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 |GPIO_PIN2);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
   }
 }
 
@@ -67,10 +75,10 @@ void loop() {
   //**change this so either systick or some other input value whenever the drone is in scanning phase**
   if(GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN1) == 0){
     //change 120 to actual input value from thermal sensor
-    input = thermal(100);
+    input = thermal(140);
     RGB_output(input);
   } else{
-    input = 0;
+    input = -1;
     RGB_output(input);
   }
   
