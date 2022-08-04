@@ -20,14 +20,15 @@
 #include <gpio.h>
 
 //made up threshold val *can change later*
-int upper_threshold = 130;
-int lower_threshold = 100;
-volatile uint8_t temp;
+float upper_threshold = 87.00;
+float lower_threshold = 85.00;
+volatile uint8_t temp = 120;
 int input = 0;
 int count = 0;
+int pressed = 0;
 
 //thermal function that activates input above certain threshold 
-int thermal(int temperature){
+int thermal(float temperature){
   int ret;
   if(temperature > upper_threshold){
     ret = 2;
@@ -67,19 +68,34 @@ void setup() {
   GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN1);
   GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
   GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
+  Serial.begin(115200);
 
 }
 
 void loop() {
   //to work requires button to be pressed in to work 
   //**change this so either systick or some other input value whenever the drone is in scanning phase**
-  if(GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN1) == 0){
-    //change 120 to actual input value from thermal sensor
-    input = thermal(140);
-    RGB_output(input);
+
+  int sensorValue = analogRead(A3);
+  float temp_C = ((3.3*sensorValue/1023.0))/.01;
+  float temp_F = temp_C*(9.0/5.0)+37.0;
+  
+  
+  
+  if((GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN1) == 0)){
+    if(pressed == 1){
+      Serial.print("temp: ");
+      Serial.print(temp_F);
+      Serial.println();
+      //change 120 to actual input value from thermal sensor
+      input = thermal(temp_F);
+      RGB_output(input);
+      pressed = 0;
+    }
   } else{
     input = -1;
     RGB_output(input);
+    pressed = 1;
   }
   
 }
