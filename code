@@ -5,6 +5,10 @@
  *create function that takes in input bool and returns void -- purpose is to cause output buzz on buzzer
  *configure ADC_init and set output pin to light (take code from RGB project
  *compare function for given val from temp sense and threshold --> returns bool val
+ *Green && Red --> non-scanning phase
+ *Green --> safe area
+ *Yellow --> potentially dangerous
+ *Red --> dangerous
 */
 
 #include <stdlib.h>
@@ -15,30 +19,48 @@
 #include <Terminal8e.h>
 #include <gpio.h>
 
-
-Screen_HX8353E myScreen;
-
-int threshold;
-bool passed_threshold;
-volatile uint8_t temp;
+//made up threshold val *can change later*
+float upper_threshold = 87.00;
+float lower_threshold = 85.00;
+volatile uint8_t temp = 120;
 int input = 0;
 int count = 0;
+int pressed = 0;
 
-void RGB_output(uint8_t count) {
-  
-    /*
-     * Add RGB counter from Lab 5 here
-     * This will increment every second
-     * This is a visual representation that your stopwatch is working
-     */
-
-     if(count == 0){
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
-  } else if(count == 1){
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1 | GPIO_PIN2);
-    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0);
+//thermal function that activates input above certain threshold 
+int thermal(float temperature){
+  int ret;
+  if(temperature > upper_threshold){
+    ret = 2;
+  } else if(temperature > lower_threshold){
+    ret = 1;
+  } else{
+    ret = 0;
   }
 
+  return ret;
+}
+
+
+
+void RGB_output(uint8_t count){
+  if(count == 0) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 |GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+  } else if(count == 1) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1);
+  } else if(count == 2) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1 |GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0);
+  } else {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 |GPIO_PIN2);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
+  }
 }
 
 void setup() {
@@ -46,20 +68,34 @@ void setup() {
   GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN1);
   GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
   GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2);
-  
-  // put your setup code here, to run once:
+  Serial.begin(115200);
 
 }
 
 void loop() {
+  //to work requires button to be pressed in to work 
+  //**change this so either systick or some other input value whenever the drone is in scanning phase**
 
-  if(GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN1) == 0){
-    input = 1;
-    RGB_output(input);
+  int sensorValue = analogRead(A3);
+  float temp_C = ((3.3*sensorValue/1023.0))/.01;
+  float temp_F = temp_C*(9.0/5.0)+37.0;
+  
+  
+  
+  if((GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN1) == 0)){
+    if(pressed == 1){
+      Serial.print("temp: ");
+      Serial.print(temp_F);
+      Serial.println();
+      //change 120 to actual input value from thermal sensor
+      input = thermal(temp_F);
+      RGB_output(input);
+      pressed = 0;
+    }
   } else{
-    input = 0;
+    input = -1;
     RGB_output(input);
+    pressed = 1;
   }
-  // put your main code here, to run repeatedly: 
   
 }
