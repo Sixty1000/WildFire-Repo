@@ -78,7 +78,7 @@ void loop() {
 
   int sensorValue = analogRead(A3);
   float temp_C = ((3.3*sensorValue/1023.0))/.01;
-  float temp_F = temp_C*(9.0/5.0)+37.0;
+  float temp_F = temp_C*(9.0/5.0)+32.0;
   
   
   
