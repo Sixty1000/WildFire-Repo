@@ -8,17 +8,30 @@
 #include <PubSubClient.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdlib.h>
+#include <string.h>
+#include <Screen_HX8353E.h>
+#include <Terminal12e.h>
+#include <Terminal6e.h>
+#include <Terminal8e.h>
+#include <gpio.h>
 
 
 uint8_t IO_button = 1;
 
 
+float upper_threshold = 87.00;
+float lower_threshold = 85.00;
+volatile uint8_t temp = 120;
+int input = 0;
+int count = 0;
+int pressed = 0;
 
 
 // your network name also called SSID
-char ssid[] = "Ally's phone";
+char ssid[] = "adrianiphone";
 // your network password
-char password[] = ".....12345";
+char password[] = "adrian123";
 // MQTTServer to use
 char server[] = "io.adafruit.com";
 
@@ -33,6 +46,44 @@ void callback(char* topic, byte* payload, unsigned int length) {
   else if (str[1] == 'N') {
     Serial.println("ON");
     IO_button = 0;
+  }
+}
+
+
+
+//thermal function that activates input above certain threshold
+int thermal(float temperature) {
+  int ret;
+  if (temperature > upper_threshold) {
+    ret = 2;
+  } else if (temperature > lower_threshold) {
+    ret = 1;
+  } else {
+    ret = 0;
+  }
+
+  return ret;
+}
+
+
+
+void RGB_output(uint8_t count) {
+  if (count == 0) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+  } else if (count == 1) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN1);
+  } else if (count == 2) {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1 | GPIO_PIN2);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0);
+  } else {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0 | GPIO_PIN2);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
   }
 }
 
@@ -82,6 +133,7 @@ void stopturn() {
   right_motor.disableMotor();
   left_motor.setSpeed(0);
   right_motor.setSpeed(0);
+  //pressed = 1;
 }
 
 void setup() {
@@ -106,6 +158,8 @@ void setup() {
   Serial.println("\nYou're connected to the network");
   Serial.println("Waiting for an ip address");
 
+
+
   while (WiFi.localIP() == INADDR_NONE) {
     // print dots while we wait for an ip addresss
     Serial.print(".");
@@ -119,10 +173,10 @@ void setup() {
 }
 
 void loop() {
-  if (!client.connected()) {
+  while (!client.connected()) {
     Serial.println("Disconnected. Reconnecting....");
 
-    if (!client.connect("energiaClient", "s1d", "aio_RjjG49JLv64xbHuzSMqi3VqETRqs")) {
+    if (!client.connect("energiaClient", "s1d", "aio_WABq27zUh4FjpaNRmuT2ueUmsIuX")) {
       Serial.println("Connection failed");
     } else {
       Serial.println("Connection success");
@@ -131,7 +185,6 @@ void loop() {
       }
     }
   }
-  Serial.println(IO_button);
   if ((IO_button == 1)) {
     // Check if any message were received
     // on the topic we subscribed to
@@ -147,9 +200,37 @@ void loop() {
     for (int i = 0; i < 4; i++) {
       forward();
       rightturn();
+
     }
     stopturn();
+
+    int sensorValue = analogRead(A3);
+    // convert the analog reading (0 to 1023) to voltage (0 - 5V)
+    float voltage = (float)sensorValue * 5.0;
+    voltage /= 1024.0;
+
+    // print out the voltage to Omega2
+    Serial.print(voltage); Serial.println(" volts");
+
+    // convert voltage to degree Celsius including the 500mV offset adjustment
+    float temperatureC = (voltage - 0.5) * 100;
+    Serial.print(temperatureC); Serial.println(" degrees C");
+
+    // convert from Celsius to Fahrenheit and print to Omega2
+    float temperatureF = (temperatureC * 9.0 / 5.0) - 270;
+    Serial.print(temperatureF); Serial.println(" degrees F");
+
+    //change 120 to actual input value from thermal sensor
+    input = thermal(temperatureF);
+    RGB_output(input);
+
+
+
+
   }
+
+
+
   client.poll();
 }
 
