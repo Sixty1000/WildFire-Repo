@@ -1,0 +1,171 @@
+#include "Romi_Motor_Power.h"
+/* Defines pin configuration of robot */
+#include "RSLK_Pins.h"
+#include "SimpleRSLK.h"
+#include "Energia.h"
+#include <SPI.h>
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <stdio.h>
+#include <time.h>
+
+
+uint8_t IO_button = 1;
+
+
+
+
+// your network name also called SSID
+char ssid[] = "Ally's phone";
+// your network password
+char password[] = ".....12345";
+// MQTTServer to use
+char server[] = "io.adafruit.com";
+
+void callback(char* topic, byte* payload, unsigned int length) {
+
+  // Type Cast Input Bytes to Char
+  char* str = (char*)payload;
+  if (str[1] == 'F') {
+    Serial.println("OFF");
+    IO_button = 1;
+  }
+  else if (str[1] == 'N') {
+    Serial.println("ON");
+    IO_button = 0;
+  }
+}
+
+WiFiClient wifiClient;
+PubSubClient client(server, 1883, callback, wifiClient);
+
+
+Romi_Motor_Power left_motor;
+Romi_Motor_Power right_motor;
+int8_t status;
+
+
+void leftturn() {
+  left_motor.enableMotor();
+  right_motor.enableMotor();
+  left_motor.setSpeed(20);
+  right_motor.setSpeed(20);
+  left_motor.directionBackward();
+  right_motor.directionForward();
+}
+
+
+void rightturn() {
+  for (int i = 0; i < 150; i++) {
+    left_motor.enableMotor();
+    right_motor.enableMotor();
+    left_motor.setSpeed(20);
+    right_motor.setSpeed(20);
+    left_motor.directionForward();
+    right_motor.directionBackward();
+  }
+}
+
+void forward() {
+  for (int i = 0; i < 1000; i++) {
+    left_motor.enableMotor();
+    right_motor.enableMotor();
+    left_motor.setSpeed(20);
+    right_motor.setSpeed(20);
+    left_motor.directionForward();
+    right_motor.directionForward();
+  }
+}
+
+void stopturn() {
+  left_motor.disableMotor();
+  right_motor.disableMotor();
+  left_motor.setSpeed(0);
+  right_motor.setSpeed(0);
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  left_motor.begin(MOTOR_L_SLP_PIN, MOTOR_L_DIR_PIN, MOTOR_L_PWM_PIN);
+  right_motor.begin(MOTOR_R_SLP_PIN, MOTOR_R_DIR_PIN, MOTOR_R_PWM_PIN);
+
+  // Start Ethernet with the build in MAC Address
+  // attempt to connect to Wifi network:
+  Serial.print("Attempting to connect to Network named: ");
+  // print the network name (SSID);
+  Serial.println(ssid);
+  // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    // print dots while we wait to connect
+    Serial.print(".");
+    delay(300);
+  }
+
+  Serial.println("\nYou're connected to the network");
+  Serial.println("Waiting for an ip address");
+
+  while (WiFi.localIP() == INADDR_NONE) {
+    // print dots while we wait for an ip addresss
+    Serial.print(".");
+    delay(300);
+  }
+
+  Serial.println("\nIP Address obtained");
+  // We are connected and have an IP address.
+  // Print the WiFi status.
+  printWifiStatus();
+}
+
+void loop() {
+  if (!client.connected()) {
+    Serial.println("Disconnected. Reconnecting....");
+
+    if (!client.connect("energiaClient", "s1d", "aio_RjjG49JLv64xbHuzSMqi3VqETRqs")) {
+      Serial.println("Connection failed");
+    } else {
+      Serial.println("Connection success");
+      if (client.subscribe("s1d/feeds/toggleRSLK")) {
+        Serial.println("Subscription successfull");
+      }
+    }
+  }
+  Serial.println(IO_button);
+  if ((IO_button == 1)) {
+    // Check if any message were received
+    // on the topic we subscribed to
+
+    stopturn();
+  }
+
+  if ((IO_button == 0)) {
+    // Reconnect if the connection was lost
+
+    // Check if any message were received
+    // on the topic we subscribed to
+    for (int i = 0; i < 4; i++) {
+      forward();
+      rightturn();
+    }
+    stopturn();
+  }
+  client.poll();
+}
+
+void printWifiStatus() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print your WiFi IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+}
